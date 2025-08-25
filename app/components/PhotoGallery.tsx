@@ -1,9 +1,66 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
+
+// Utility function to create low-res version of image
+const createLowResImage = (
+  imgSrc: string,
+  quality: number = 0.3,
+  maxWidth: number = 300
+): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) {
+        reject(new Error("Could not get canvas context"));
+        return;
+      }
+
+      // Calculate dimensions maintaining aspect ratio
+      const aspectRatio = img.width / img.height;
+      let newWidth = maxWidth;
+      let newHeight = maxWidth / aspectRatio;
+
+      if (newHeight > maxWidth) {
+        newHeight = maxWidth;
+        newWidth = maxWidth * aspectRatio;
+      }
+
+      canvas.width = newWidth;
+      canvas.height = newHeight;
+
+      // Draw and compress image
+      ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+      // Add slight blur to reduce detail
+      ctx.filter = "blur(1px)";
+      ctx.drawImage(canvas, 0, 0);
+      ctx.filter = "none";
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            const lowResUrl = URL.createObjectURL(blob);
+            resolve(lowResUrl);
+          } else {
+            reject(new Error("Could not create low-res image"));
+          }
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+    img.onerror = () => reject(new Error("Could not load image"));
+    img.src = imgSrc;
+  });
+};
 
 interface Photo {
   _id: Id<"photos">;
@@ -35,11 +92,42 @@ export function PhotoGallery({
     Id<"photos">[]
   >([]);
   const [targetUserId, setTargetUserId] = useState<Id<"users"> | null>(null);
+  const [lowResImages, setLowResImages] = useState<Record<string, string>>({});
+  const [loadingLowRes, setLoadingLowRes] = useState<Set<string>>(new Set());
 
   const createTrade = useMutation(api.trades.createTrade);
 
   const myPhotos = photos.filter((photo) => !photo.canTrade);
   const tradablePhotos = photos.filter((photo) => photo.canTrade);
+
+  // Generate low-res version of image for trading
+  const getLowResImage = async (photoId: string, originalUrl: string) => {
+    if (lowResImages[photoId] || loadingLowRes.has(photoId)) {
+      return lowResImages[photoId];
+    }
+
+    setLoadingLowRes((prev) => new Set(prev).add(photoId));
+
+    try {
+      const lowResUrl = await createLowResImage(originalUrl, 0.2, 200);
+      setLowResImages((prev) => ({ ...prev, [photoId]: lowResUrl }));
+      return lowResUrl;
+    } catch (error) {
+      console.error("Failed to create low-res image:", error);
+      return originalUrl; // Fallback to original
+    } finally {
+      setLoadingLowRes((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(photoId);
+        return newSet;
+      });
+    }
+  };
+
+  // Determine if we should show low-res version (during trading, not owned by user)
+  const shouldShowLowRes = (photo: Photo, isInTradeModal: boolean = false) => {
+    return isInTradeModal && photo.canTrade; // Show low-res for photos being traded that user doesn't own
+  };
 
   const handlePhotoSelect = (photo: Photo, isRequested: boolean) => {
     if (isRequested) {
@@ -102,6 +190,64 @@ export function PhotoGallery({
     setSelectedRequestedPhotos([]);
     setSelectedOfferedPhotos([]);
     setTargetUserId(null);
+  };
+
+  // Photo display component that handles low-res logic
+  const PhotoDisplay = ({
+    photo,
+    isInTradeModal = false,
+    className = "",
+  }: {
+    photo: Photo;
+    isInTradeModal?: boolean;
+    className?: string;
+  }) => {
+    const [displayUrl, setDisplayUrl] = useState<string | null>(photo.url);
+
+    useEffect(() => {
+      if (shouldShowLowRes(photo, isInTradeModal) && photo.url) {
+        getLowResImage(photo._id, photo.url).then(setDisplayUrl);
+      } else {
+        setDisplayUrl(photo.url);
+      }
+    }, [photo, isInTradeModal]);
+
+    const isLoadingLowRes =
+      shouldShowLowRes(photo, isInTradeModal) && loadingLowRes.has(photo._id);
+
+    return (
+      <>
+        {displayUrl ? (
+          <img
+            src={displayUrl}
+            alt="Photo"
+            className={className}
+            style={{
+              filter: shouldShowLowRes(photo, isInTradeModal)
+                ? "blur(0.5px)"
+                : "none",
+            }}
+          />
+        ) : (
+          <div
+            className={`bg-gray-200 flex items-center justify-center ${className}`}
+          >
+            {isLoadingLowRes ? (
+              <div className="text-xs text-gray-500">Processing...</div>
+            ) : (
+              <span className="text-gray-400">Loading...</span>
+            )}
+          </div>
+        )}
+        {shouldShowLowRes(photo, isInTradeModal) && (
+          <div className="absolute inset-0 bg-black bg-opacity-10 flex items-center justify-center">
+            <div className="bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+              Preview Quality
+            </div>
+          </div>
+        )}
+      </>
+    );
   };
 
   if (photos.length === 0) {
@@ -196,7 +342,19 @@ export function PhotoGallery({
       {showTradeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
-            <h3 className="text-xl font-semibold mb-6">Create Trade Offer</h3>
+            <h3 className="text-xl font-semibold mb-4">Create Trade Offer</h3>
+
+            {/* Low-res notice */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
+              <div className="flex items-start gap-2">
+                <span className="text-amber-600 text-sm">ℹ️</span>
+                <div className="text-sm text-amber-800">
+                  <strong>Preview Quality:</strong> Photos shown here are in low
+                  resolution to protect image quality. You'll receive the
+                  full-resolution images after successful trades.
+                </div>
+              </div>
+            </div>
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Photos You Want */}
@@ -215,13 +373,11 @@ export function PhotoGallery({
                       }`}
                       onClick={() => handlePhotoSelect(photo, true)}
                     >
-                      {photo.url && (
-                        <img
-                          src={photo.url}
-                          alt="Available photo"
-                          className="w-full h-20 object-cover rounded"
-                        />
-                      )}
+                      <PhotoDisplay
+                        photo={photo}
+                        isInTradeModal={true}
+                        className="w-full h-20 object-cover rounded"
+                      />
                       <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs px-1 py-0.5 rounded-b">
                         {photo.ownerName}
                       </div>
@@ -251,13 +407,11 @@ export function PhotoGallery({
                       }`}
                       onClick={() => handlePhotoSelect(photo, false)}
                     >
-                      {photo.url && (
-                        <img
-                          src={photo.url}
-                          alt="Your photo"
-                          className="w-full h-20 object-cover rounded"
-                        />
-                      )}
+                      <PhotoDisplay
+                        photo={photo}
+                        isInTradeModal={true}
+                        className="w-full h-20 object-cover rounded"
+                      />
                       {selectedOfferedPhotos.includes(photo._id) && (
                         <div className="absolute top-1 right-1 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
                           ✓

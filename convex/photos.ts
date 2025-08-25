@@ -123,3 +123,44 @@ export const getSessionPhotos = query({
     return photosWithDetails;
   },
 });
+
+export const getUserGallery = query({
+  args: {},
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    // Get all photos owned by the user (either captured by them or traded to them)
+    const userPhotos = await ctx.db
+      .query("photos")
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("capturedBy"), userId),
+          q.eq(q.field("tradedTo"), userId)
+        )
+      )
+      .collect();
+
+    // Only include revealed photos
+    const revealedPhotos = userPhotos.filter((photo) => photo.isRevealed);
+
+    const photosWithDetails = await Promise.all(
+      revealedPhotos.map(async (photo) => {
+        const url = await ctx.storage.getUrl(photo.storageId);
+        const session = await ctx.db.get(photo.sessionId);
+        const capturer = await ctx.db.get(photo.capturedBy);
+
+        return {
+          ...photo,
+          url,
+          sessionName: session?.name || "Unknown Session",
+          capturerName: capturer?.name || capturer?.email || "Unknown",
+          capturedAtFormatted: new Date(photo.capturedAt).toLocaleDateString(),
+        };
+      })
+    );
+
+    // Sort by capture date, newest first
+    return photosWithDetails.sort((a, b) => b.capturedAt - a.capturedAt);
+  },
+});

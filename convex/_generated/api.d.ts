@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as auth from "../auth.js";
+import type * as gamification from "../gamification.js";
 import type * as http from "../http.js";
 import type * as photos from "../photos.js";
 import type * as router from "../router.js";
@@ -30,6 +31,7 @@ import type * as trades from "../trades.js";
  */
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  gamification: typeof gamification;
   http: typeof http;
   photos: typeof photos;
   router: typeof router;
