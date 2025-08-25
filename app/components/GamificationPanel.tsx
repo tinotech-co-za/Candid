@@ -46,10 +46,14 @@ export function GamificationPanel({ sessionId }: GamificationPanelProps) {
         newBadges.length > userStats.badges.length
       ) {
         const earnedBadges = newBadges.filter(
-          (badge) => !userStats.badges.includes(badge)
+          (badge) =>
+            !userStats.badges.some(
+              (existingBadge) => existingBadge.id === badge.id
+            )
         );
+        const badgeNames = earnedBadges.map((badge) => badge.name);
         toast.success(
-          `🎉 You earned new badge(s): ${earnedBadges.join(", ")}!`
+          `🎉 You earned new badge${badgeNames.length > 1 ? "s" : ""}: ${badgeNames.join(", ")}!`
         );
       } else {
         toast.success("Badge calculation completed!");
