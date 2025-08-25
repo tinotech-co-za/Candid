@@ -143,7 +143,7 @@ export const getSessionDetails = query({
     const photosWithUrls = await Promise.all(
       photos.map(async (photo) => {
         const url = await ctx.storage.getUrl(photo.storageId);
-        const capturer = await ctx.db.get(photo.capturedBy);
+        const capturer = await ctx.db.get(photo.originalOwnerId);
         return {
           ...photo,
           url,

@@ -39,10 +39,22 @@ const createLowResImage = (
       // Draw and compress image
       ctx.drawImage(img, 0, 0, newWidth, newHeight);
 
-      // Add slight blur to reduce detail
-      ctx.filter = "blur(1px)";
+      // Add stronger blur to significantly reduce detail
+      ctx.filter = "blur(2px)";
       ctx.drawImage(canvas, 0, 0);
       ctx.filter = "none";
+
+      // Add subtle noise pattern to further degrade quality
+      const imageData = ctx.getImageData(0, 0, newWidth, newHeight);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        // Add small random noise to each pixel
+        const noise = (Math.random() - 0.5) * 10;
+        data[i] = Math.max(0, Math.min(255, data[i] + noise)); // Red
+        data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise)); // Green
+        data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise)); // Blue
+      }
+      ctx.putImageData(imageData, 0, 0);
 
       canvas.toBlob(
         (blob) => {
@@ -109,7 +121,8 @@ export function PhotoGallery({
     setLoadingLowRes((prev) => new Set(prev).add(photoId));
 
     try {
-      const lowResUrl = await createLowResImage(originalUrl, 0.2, 200);
+      // Use more aggressive compression for trading view
+      const lowResUrl = await createLowResImage(originalUrl, 0.1, 150);
       setLowResImages((prev) => ({ ...prev, [photoId]: lowResUrl }));
       return lowResUrl;
     } catch (error) {
@@ -124,9 +137,9 @@ export function PhotoGallery({
     }
   };
 
-  // Determine if we should show low-res version (during trading, not owned by user)
+  // Determine if we should show low-res version (during trading, all photos)
   const shouldShowLowRes = (photo: Photo, isInTradeModal: boolean = false) => {
-    return isInTradeModal && photo.canTrade; // Show low-res for photos being traded that user doesn't own
+    return isInTradeModal; // Show low-res for ALL photos in trade modal
   };
 
   const handlePhotoSelect = (photo: Photo, isRequested: boolean) => {
@@ -240,9 +253,9 @@ export function PhotoGallery({
           </div>
         )}
         {shouldShowLowRes(photo, isInTradeModal) && (
-          <div className="absolute inset-0 bg-black bg-opacity-10 flex items-center justify-center">
-            <div className="bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-              Preview Quality
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent flex items-end justify-center pb-2">
+            <div className="bg-black bg-opacity-80 text-white text-xs px-3 py-1 rounded-full border border-white border-opacity-30">
+              🔍 Preview Quality
             </div>
           </div>
         )}
@@ -345,13 +358,20 @@ export function PhotoGallery({
             <h3 className="text-xl font-semibold mb-4">Create Trade Offer</h3>
 
             {/* Low-res notice */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
-              <div className="flex items-start gap-2">
-                <span className="text-amber-600 text-sm">ℹ️</span>
-                <div className="text-sm text-amber-800">
-                  <strong>Preview Quality:</strong> Photos shown here are in low
-                  resolution to protect image quality. You'll receive the
-                  full-resolution images after successful trades.
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-lg p-4 mb-6 shadow-sm">
+              <div className="flex items-start gap-3">
+                <span className="text-amber-600 text-lg">🔍</span>
+                <div className="text-sm text-amber-900">
+                  <strong className="text-amber-800 font-semibold">
+                    Trading Preview Mode:
+                  </strong>{" "}
+                  All photos are displayed in low resolution to protect image
+                  quality and prevent screenshots.
+                  <br />
+                  <span className="text-amber-700 mt-1 block">
+                    You'll receive full-resolution images after successful
+                    trades.
+                  </span>
                 </div>
               </div>
             </div>

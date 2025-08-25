@@ -11,6 +11,19 @@ const BADGE_EMOJIS = {
   Collector: "🏆",
 };
 
+const getDefaultCriteria = (badgeName: string) => {
+  switch (badgeName) {
+    case "Sharp Shooter":
+      return "Most photos in a session";
+    case "Most Wanted":
+      return "Photo traded the most";
+    case "Collector":
+      return "Traded for the most photos";
+    default:
+      return "";
+  }
+};
+
 interface GamificationPanelProps {
   sessionId?: Id<"sessions">;
 }
@@ -123,19 +136,20 @@ export function GamificationPanel({ sessionId }: GamificationPanelProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {userStats.badges.map((badge) => (
                     <div
-                      key={badge}
+                      key={badge.id}
                       className="bg-gradient-to-r from-yellow-400 to-yellow-600 p-4 rounded-lg text-white"
                     >
                       <div className="text-2xl mb-2">
-                        {BADGE_EMOJIS[badge as keyof typeof BADGE_EMOJIS] ||
-                          "🏅"}
+                        {BADGE_EMOJIS[
+                          badge.name as keyof typeof BADGE_EMOJIS
+                        ] || "🏅"}
                       </div>
-                      <div className="font-semibold">{badge}</div>
+                      <div className="font-semibold">{badge.name}</div>
                       <div className="text-sm opacity-90 mt-1">
-                        {badge === "Sharp Shooter" &&
-                          "Most photos in a session"}
-                        {badge === "Most Wanted" && "Photo traded the most"}
-                        {badge === "Collector" && "Traded for the most photos"}
+                        {badge.criteria || getDefaultCriteria(badge.name)}
+                      </div>
+                      <div className="text-xs opacity-70 mt-1">
+                        Earned {new Date(badge.earnedAt).toLocaleDateString()}
                       </div>
                     </div>
                   ))}
@@ -189,9 +203,9 @@ export function GamificationPanel({ sessionId }: GamificationPanelProps) {
                         <div className="font-medium">{player.userName}</div>
                         <div className="flex gap-1 mt-1">
                           {player.badges.slice(0, 3).map((badge) => (
-                            <span key={badge} className="text-sm">
+                            <span key={badge.id} className="text-sm">
                               {BADGE_EMOJIS[
-                                badge as keyof typeof BADGE_EMOJIS
+                                badge.name as keyof typeof BADGE_EMOJIS
                               ] || "🏅"}
                             </span>
                           ))}

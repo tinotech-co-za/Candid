@@ -40,10 +40,12 @@ export const capturePhoto = mutation({
 
     const photoId = await ctx.db.insert("photos", {
       sessionId: args.sessionId,
-      capturedBy: userId,
+      originalOwnerId: userId,
+      ownerId: userId, // Initially owned by the capturer
       storageId: args.storageId,
       isRevealed: false,
       capturedAt: Date.now(),
+      tradeCount: 0,
     });
 
     // Update user stats
@@ -55,6 +57,7 @@ export const capturePhoto = mutation({
     if (stats) {
       await ctx.db.patch(stats._id, {
         totalPhotos: stats.totalPhotos + 1,
+        lastActivity: Date.now(),
       });
     } else {
       await ctx.db.insert("userStats", {
@@ -62,7 +65,11 @@ export const capturePhoto = mutation({
         totalPhotos: 1,
         totalTrades: 0,
         sessionsAttended: 1,
+        sessionsHosted: 0,
+        photosReceived: 0,
         badges: [],
+        lastActivity: Date.now(),
+        joinedAt: Date.now(),
       });
     }
 
@@ -97,25 +104,23 @@ export const getSessionPhotos = query({
 
     // Only show revealed photos or photos taken by the user
     const visiblePhotos = photos.filter(
-      (photo) => photo.isRevealed || photo.capturedBy === userId
+      (photo) => photo.isRevealed || photo.originalOwnerId === userId
     );
 
     const photosWithDetails = await Promise.all(
       visiblePhotos.map(async (photo) => {
         const url = await ctx.storage.getUrl(photo.storageId);
-        const capturer = await ctx.db.get(photo.capturedBy);
-        const owner = photo.tradedTo
-          ? await ctx.db.get(photo.tradedTo)
-          : capturer;
+        const originalOwner = await ctx.db.get(photo.originalOwnerId);
+        const currentOwner = await ctx.db.get(photo.ownerId);
 
         return {
           ...photo,
           url,
-          capturerName: capturer?.name || capturer?.email || "Unknown",
-          ownerName: owner?.name || owner?.email || "Unknown",
-          ownerId: photo.tradedTo || photo.capturedBy,
-          canTrade:
-            photo.isRevealed && (photo.tradedTo || photo.capturedBy) !== userId,
+          capturerName:
+            originalOwner?.name || originalOwner?.email || "Unknown",
+          ownerName: currentOwner?.name || currentOwner?.email || "Unknown",
+          ownerId: photo.ownerId,
+          canTrade: photo.isRevealed && photo.ownerId !== userId,
         };
       })
     );
@@ -130,15 +135,10 @@ export const getUserGallery = query({
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
 
-    // Get all photos owned by the user (either captured by them or traded to them)
+    // Get all photos owned by the user
     const userPhotos = await ctx.db
       .query("photos")
-      .filter((q) =>
-        q.or(
-          q.eq(q.field("capturedBy"), userId),
-          q.eq(q.field("tradedTo"), userId)
-        )
-      )
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
       .collect();
 
     // Only include revealed photos
@@ -148,13 +148,14 @@ export const getUserGallery = query({
       revealedPhotos.map(async (photo) => {
         const url = await ctx.storage.getUrl(photo.storageId);
         const session = await ctx.db.get(photo.sessionId);
-        const capturer = await ctx.db.get(photo.capturedBy);
+        const originalOwner = await ctx.db.get(photo.originalOwnerId);
 
         return {
           ...photo,
           url,
           sessionName: session?.name || "Unknown Session",
-          capturerName: capturer?.name || capturer?.email || "Unknown",
+          capturerName:
+            originalOwner?.name || originalOwner?.email || "Unknown",
           capturedAtFormatted: new Date(photo.capturedAt).toLocaleDateString(),
         };
       })

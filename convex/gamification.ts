@@ -79,8 +79,12 @@ export const calculateAndAssignBadges = mutation({
         userId,
         totalPhotos: 0,
         totalTrades: 0,
-        sessionsAttended: 0,
+        sessionsAttended: 1,
+        sessionsHosted: 0,
+        photosReceived: 0,
         badges: [],
+        lastActivity: Date.now(),
+        joinedAt: Date.now(),
       });
       userStats = await ctx.db.get(newStatsId);
     }
@@ -95,7 +99,7 @@ export const calculateAndAssignBadges = mutation({
     // Calculate Sharp Shooter badge - most photos in any single session
     const userPhotos = await ctx.db
       .query("photos")
-      .withIndex("by_capturer", (q) => q.eq("capturedBy", userId))
+      .withIndex("by_original_owner", (q) => q.eq("originalOwnerId", userId))
       .collect();
 
     // Group photos by session
@@ -118,9 +122,14 @@ export const calculateAndAssignBadges = mutation({
     // Award Sharp Shooter if more than 5 photos in a session
     if (
       maxPhotosInSession >= 5 &&
-      !currentBadges.includes(BADGES.SHARP_SHOOTER)
+      !currentBadges.some((badge) => badge.id === "sharp_shooter")
     ) {
-      newBadges.push(BADGES.SHARP_SHOOTER);
+      newBadges.push({
+        id: "sharp_shooter",
+        name: BADGES.SHARP_SHOOTER,
+        earnedAt: Date.now(),
+        criteria: `Captured ${maxPhotosInSession} photos in a single session`,
+      });
     }
 
     // Calculate Most Wanted badge - photo traded the most times
@@ -128,54 +137,38 @@ export const calculateAndAssignBadges = mutation({
     // For now, we'll award it if user has photos that have been traded more than 3 times
     const userOwnedPhotos = await ctx.db
       .query("photos")
-      .filter((q) =>
-        q.or(
-          q.eq(q.field("capturedBy"), userId),
-          q.eq(q.field("tradedTo"), userId)
-        )
-      )
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
       .collect();
 
     let maxTradesForPhoto = 0;
     for (const photo of userOwnedPhotos) {
-      // Count trades involving this photo
-      const tradesInvolvingPhoto = await ctx.db
-        .query("trades")
-        .filter((q) =>
-          q.or(
-            q.eq(q.field("offeredPhotoId"), photo._id),
-            q.eq(q.field("requestedPhotoId"), photo._id),
-            ...(photo._id
-              ? [
-                  q.neq(q.field("offeredPhotoIds"), null),
-                  q.neq(q.field("requestedPhotoIds"), null),
-                ]
-              : [])
-          )
-        )
-        .collect();
-
-      // Check multi-photo trades
-      const multiPhotoTrades = tradesInvolvingPhoto.filter(
-        (trade) =>
-          trade.offeredPhotoIds?.includes(photo._id) ||
-          trade.requestedPhotoIds?.includes(photo._id)
-      );
-
-      const totalTrades = tradesInvolvingPhoto.length + multiPhotoTrades.length;
-      maxTradesForPhoto = Math.max(maxTradesForPhoto, totalTrades);
+      // Use the tradeCount field which tracks how many times this photo has been traded
+      maxTradesForPhoto = Math.max(maxTradesForPhoto, photo.tradeCount);
     }
 
-    if (maxTradesForPhoto >= 3 && !currentBadges.includes(BADGES.MOST_WANTED)) {
-      newBadges.push(BADGES.MOST_WANTED);
+    if (
+      maxTradesForPhoto >= 3 &&
+      !currentBadges.some((badge) => badge.id === "most_wanted")
+    ) {
+      newBadges.push({
+        id: "most_wanted",
+        name: BADGES.MOST_WANTED,
+        earnedAt: Date.now(),
+        criteria: `Photo traded ${maxTradesForPhoto} times`,
+      });
     }
 
     // Calculate Collector badge - traded for the most photos
     if (
       userStats.totalTrades >= 10 &&
-      !currentBadges.includes(BADGES.COLLECTOR)
+      !currentBadges.some((badge) => badge.id === "collector")
     ) {
-      newBadges.push(BADGES.COLLECTOR);
+      newBadges.push({
+        id: "collector",
+        name: BADGES.COLLECTOR,
+        earnedAt: Date.now(),
+        criteria: `Completed ${userStats.totalTrades} successful trades`,
+      });
     }
 
     // Update user stats with new badges
@@ -199,7 +192,9 @@ export const refreshAllUserStats = mutation({
       // Recalculate photos count
       const userPhotos = await ctx.db
         .query("photos")
-        .withIndex("by_capturer", (q) => q.eq("capturedBy", userStat.userId))
+        .withIndex("by_original_owner", (q) =>
+          q.eq("originalOwnerId", userStat.userId)
+        )
         .collect();
 
       // Recalculate trades count

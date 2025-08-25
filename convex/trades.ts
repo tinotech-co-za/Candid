@@ -21,7 +21,7 @@ export const createTrade = mutation({
     // Verify all offered photos belong to user
     for (const photoId of args.offeredPhotoIds) {
       const photo = await ctx.db.get(photoId);
-      if (!photo || (photo.tradedTo || photo.capturedBy) !== userId) {
+      if (!photo || photo.ownerId !== userId) {
         throw new Error("You don't own one of the offered photos");
       }
     }
@@ -29,7 +29,7 @@ export const createTrade = mutation({
     // Verify all requested photos belong to target user
     for (const photoId of args.requestedPhotoIds) {
       const photo = await ctx.db.get(photoId);
-      if (!photo || (photo.tradedTo || photo.capturedBy) !== args.toUserId) {
+      if (!photo || photo.ownerId !== args.toUserId) {
         throw new Error("Target user doesn't own one of the requested photos");
       }
     }
@@ -72,30 +72,43 @@ export const respondToTrade = mutation({
     await ctx.db.patch(args.tradeId, { status: newStatus });
 
     if (args.accept) {
-      // Execute the trade - swap photo ownership
-      // Handle new multi-photo format
-      if (trade.offeredPhotoIds && trade.requestedPhotoIds) {
-        for (const photoId of trade.offeredPhotoIds) {
+      // Execute the trade - swap photo ownership and create transfer records
+      for (const photoId of trade.offeredPhotoIds) {
+        const photo = await ctx.db.get(photoId);
+        if (photo) {
           await ctx.db.patch(photoId, {
-            tradedTo: trade.toUserId,
+            ownerId: trade.toUserId,
+            tradeCount: photo.tradeCount + 1,
           });
-        }
-        
-        for (const photoId of trade.requestedPhotoIds) {
-          await ctx.db.patch(photoId, {
-            tradedTo: trade.fromUserId,
+
+          // Create transfer record
+          await ctx.db.insert("photoTransfers", {
+            photoId,
+            fromUserId: trade.fromUserId,
+            toUserId: trade.toUserId,
+            tradeId: trade._id,
+            transferredAt: Date.now(),
           });
         }
       }
-      // Handle legacy single-photo format
-      else if (trade.offeredPhotoId && trade.requestedPhotoId) {
-        await ctx.db.patch(trade.offeredPhotoId, {
-          tradedTo: trade.toUserId,
-        });
-        
-        await ctx.db.patch(trade.requestedPhotoId, {
-          tradedTo: trade.fromUserId,
-        });
+
+      for (const photoId of trade.requestedPhotoIds) {
+        const photo = await ctx.db.get(photoId);
+        if (photo) {
+          await ctx.db.patch(photoId, {
+            ownerId: trade.fromUserId,
+            tradeCount: photo.tradeCount + 1,
+          });
+
+          // Create transfer record
+          await ctx.db.insert("photoTransfers", {
+            photoId,
+            fromUserId: trade.toUserId,
+            toUserId: trade.fromUserId,
+            tradeId: trade._id,
+            transferredAt: Date.now(),
+          });
+        }
       }
 
       // Update user stats
@@ -112,12 +125,18 @@ export const respondToTrade = mutation({
       if (fromUserStats) {
         await ctx.db.patch(fromUserStats._id, {
           totalTrades: fromUserStats.totalTrades + 1,
+          photosReceived:
+            fromUserStats.photosReceived + trade.requestedPhotoIds.length,
+          lastActivity: Date.now(),
         });
       }
 
       if (toUserStats) {
         await ctx.db.patch(toUserStats._id, {
           totalTrades: toUserStats.totalTrades + 1,
+          photosReceived:
+            toUserStats.photosReceived + trade.offeredPhotoIds.length,
+          lastActivity: Date.now(),
         });
       }
     }
@@ -150,44 +169,33 @@ export const getUserTrades = query({
       allTrades.map(async (trade) => {
         const fromUser = await ctx.db.get(trade.fromUserId);
         const toUser = await ctx.db.get(trade.toUserId);
-        
-        // Handle both new and legacy formats
+
+        // Handle multi-photo format (only format supported in new schema)
         let offeredPhotos: any[] = [];
         let requestedPhotos: any[] = [];
 
         if (trade.offeredPhotoIds && trade.requestedPhotoIds) {
-          offeredPhotos = (await Promise.all(
-            trade.offeredPhotoIds.map(async (photoId) => {
-              const photo = await ctx.db.get(photoId);
-              if (!photo) return null;
-              const url = await ctx.storage.getUrl(photo.storageId);
-              return { ...photo, url };
-            })
-          )).filter(Boolean);
+          offeredPhotos = (
+            await Promise.all(
+              trade.offeredPhotoIds.map(async (photoId) => {
+                const photo = await ctx.db.get(photoId);
+                if (!photo) return null;
+                const url = await ctx.storage.getUrl(photo.storageId);
+                return { ...photo, url };
+              })
+            )
+          ).filter(Boolean);
 
-          requestedPhotos = (await Promise.all(
-            trade.requestedPhotoIds.map(async (photoId) => {
-              const photo = await ctx.db.get(photoId);
-              if (!photo) return null;
-              const url = await ctx.storage.getUrl(photo.storageId);
-              return { ...photo, url };
-            })
-          )).filter(Boolean);
-        }
-        // Handle legacy single-photo format
-        else if (trade.offeredPhotoId && trade.requestedPhotoId) {
-          const offeredPhoto = await ctx.db.get(trade.offeredPhotoId);
-          const requestedPhoto = await ctx.db.get(trade.requestedPhotoId);
-          
-          if (offeredPhoto) {
-            const url = await ctx.storage.getUrl(offeredPhoto.storageId);
-            offeredPhotos = [{ ...offeredPhoto, url }];
-          }
-          
-          if (requestedPhoto) {
-            const url = await ctx.storage.getUrl(requestedPhoto.storageId);
-            requestedPhotos = [{ ...requestedPhoto, url }];
-          }
+          requestedPhotos = (
+            await Promise.all(
+              trade.requestedPhotoIds.map(async (photoId) => {
+                const photo = await ctx.db.get(photoId);
+                if (!photo) return null;
+                const url = await ctx.storage.getUrl(photo.storageId);
+                return { ...photo, url };
+              })
+            )
+          ).filter(Boolean);
         }
 
         return {
