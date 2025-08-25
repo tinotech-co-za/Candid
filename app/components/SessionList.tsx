@@ -4,12 +4,10 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
-interface SessionListProps {
-  onSelectSession: (sessionId: Id<"sessions">) => void;
-}
-
-export function SessionList({ onSelectSession }: SessionListProps) {
+export function SessionList() {
+  const router = useRouter();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [sessionName, setSessionName] = useState("");
   const [joinCode, setJoinCode] = useState("");
@@ -28,7 +26,7 @@ export function SessionList({ onSelectSession }: SessionListProps) {
       toast.success("Session created!");
       setSessionName("");
       setShowCreateForm(false);
-      onSelectSession(sessionId);
+      router.push(`/session/${sessionId}`);
     } catch (error) {
       toast.error("Failed to create session");
     }
@@ -43,7 +41,7 @@ export function SessionList({ onSelectSession }: SessionListProps) {
       toast.success("Joined session!");
       setJoinCode("");
       setShowJoinForm(false);
-      onSelectSession(joinCode as Id<"sessions">);
+      router.push(`/session/${joinCode}`);
     } catch (error) {
       toast.error("Failed to join session");
     }
@@ -142,7 +140,7 @@ export function SessionList({ onSelectSession }: SessionListProps) {
           <div
             key={session._id}
             className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => onSelectSession(session._id)}
+            onClick={() => router.push(`/session/${session._id}`)}
           >
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold text-lg">{session.name}</h3>

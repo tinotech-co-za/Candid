@@ -9,10 +9,9 @@ import { TradePanel } from "./TradePanel";
 
 interface SessionViewProps {
   sessionId: Id<"sessions">;
-  onBack: () => void;
 }
 
-export function SessionView({ sessionId, onBack }: SessionViewProps) {
+export function SessionView({ sessionId }: SessionViewProps) {
   const [activeTab, setActiveTab] = useState<"photos" | "trades">("photos");
   const fileInputRef = useRef<HTMLInputElement>(null);
 

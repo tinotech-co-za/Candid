@@ -1,27 +1,39 @@
 "use client";
 import { Authenticated, Unauthenticated, useQuery } from "convex/react";
-import { api } from "../convex/_generated/api";
-import { SignInForm } from "./components/SignInForm";
-import { SignOutButton } from "./components/SignOutButton";
-import { SessionList } from "./components/SessionList";
+import { api } from "../../../convex/_generated/api";
+import { SignInForm } from "../../components/SignInForm";
+import { SignOutButton } from "../../components/SignOutButton";
+import { SessionView } from "../../components/SessionView";
+import { useParams, useRouter } from "next/navigation";
+import { Id } from "../../../convex/_generated/dataModel";
 
-export default function HomePage() {
+export default function SessionPage() {
+  const params = useParams();
+  const router = useRouter();
+  const sessionId = params.id as Id<"sessions">;
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm h-16 flex justify-between items-center border-b shadow-sm px-4">
         <div className="flex items-center gap-4">
           <h2 className="text-xl font-semibold text-primary">📸 Candid</h2>
+          <button
+            onClick={() => router.push("/")}
+            className="text-sm text-gray-600 hover:text-gray-800"
+          >
+            ← Back to Sessions
+          </button>
         </div>
         <SignOutButton />
       </header>
       <main className="flex-1 p-4">
-        <Content />
+        <Content sessionId={sessionId} />
       </main>
     </div>
   );
 }
 
-function Content() {
+function Content({ sessionId }: { sessionId: Id<"sessions"> }) {
   const loggedInUser = useQuery(api.auth.loggedInUser);
 
   if (loggedInUser === undefined) {
@@ -35,7 +47,7 @@ function Content() {
   return (
     <div className="max-w-4xl mx-auto">
       <Authenticated>
-        <SessionList />
+        <SessionView sessionId={sessionId} />
       </Authenticated>
 
       <Unauthenticated>
