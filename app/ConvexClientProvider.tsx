@@ -9,7 +9,7 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Initialize Convex client on the client side only
-    const convexUrl = process.env.SITE_URL;
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
     if (convexUrl && typeof window !== "undefined") {
       setConvex(new ConvexReactClient(convexUrl));
     }
