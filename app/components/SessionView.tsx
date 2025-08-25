@@ -57,8 +57,16 @@ export function SessionView({ sessionId }: SessionViewProps) {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-    } catch (error) {
-      toast.error("Failed to capture photo");
+    } catch (error: any) {
+      if (error?.message?.includes("Not authenticated")) {
+        toast.error("Please sign in to capture photos.");
+      } else if (error?.message?.includes("Not a participant")) {
+        toast.error(
+          "You're not a participant in this session. Please join the session first."
+        );
+      } else {
+        toast.error("Failed to capture photo. Please try again.");
+      }
     }
   };
 
@@ -66,8 +74,14 @@ export function SessionView({ sessionId }: SessionViewProps) {
     try {
       await revealPhotos({ sessionId });
       toast.success("Photos revealed!");
-    } catch (error) {
-      toast.error("Failed to reveal photos");
+    } catch (error: any) {
+      if (error?.message?.includes("Not authenticated")) {
+        toast.error("Please sign in to reveal photos.");
+      } else if (error?.message?.includes("Not a participant")) {
+        toast.error("Only session hosts can reveal photos.");
+      } else {
+        toast.error("Failed to reveal photos. Please try again.");
+      }
     }
   };
 

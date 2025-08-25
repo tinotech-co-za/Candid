@@ -84,8 +84,16 @@ export function PhotoGallery({
       setSelectedRequestedPhotos([]);
       setSelectedOfferedPhotos([]);
       setTargetUserId(null);
-    } catch (error) {
-      toast.error("Failed to send trade request");
+    } catch (error: any) {
+      if (error?.message?.includes("Not authenticated")) {
+        toast.error("Please sign in to create trade requests.");
+      } else if (error?.message?.includes("Not a participant")) {
+        toast.error(
+          "You're not a participant in this session. Please join the session first."
+        );
+      } else {
+        toast.error("Failed to send trade request. Please try again.");
+      }
     }
   };
 

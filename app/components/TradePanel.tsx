@@ -50,8 +50,16 @@ export function TradePanel({ trades }: TradePanelProps) {
     try {
       await respondToTrade({ tradeId, accept });
       toast.success(accept ? "Trade accepted!" : "Trade rejected");
-    } catch (error) {
-      toast.error("Failed to respond to trade");
+    } catch (error: any) {
+      if (error?.message?.includes("Not authenticated")) {
+        toast.error("Please sign in to respond to trades.");
+      } else if (error?.message?.includes("Not a participant")) {
+        toast.error(
+          "You're not a participant in this session. Please join the session first."
+        );
+      } else {
+        toast.error("Failed to respond to trade. Please try again.");
+      }
     }
   };
 
