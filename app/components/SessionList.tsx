@@ -1,3 +1,4 @@
+"use client";
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -51,8 +52,12 @@ export function SessionList({ onSelectSession }: SessionListProps) {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Your Photo Sessions</h1>
-        <p className="text-gray-600">Create a new session or join an existing one</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Your Photo Sessions
+        </h1>
+        <p className="text-gray-600">
+          Create a new session or join an existing one
+        </p>
       </div>
 
       <div className="flex gap-4 justify-center">
@@ -141,11 +146,15 @@ export function SessionList({ onSelectSession }: SessionListProps) {
           >
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold text-lg">{session.name}</h3>
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                session.status === 'active' ? 'bg-green-100 text-green-800' :
-                session.status === 'revealed' ? 'bg-blue-100 text-blue-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
+              <span
+                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  session.status === "active"
+                    ? "bg-green-100 text-green-800"
+                    : session.status === "revealed"
+                      ? "bg-blue-100 text-blue-800"
+                      : "bg-gray-100 text-gray-800"
+                }`}
+              >
                 {session.status}
               </span>
             </div>
@@ -153,10 +162,13 @@ export function SessionList({ onSelectSession }: SessionListProps) {
               Host: {session.hostName}
             </p>
             <p className="text-gray-600 text-sm">
-              {session.participantCount} participant{session.participantCount !== 1 ? 's' : ''}
+              {session.participantCount} participant
+              {session.participantCount !== 1 ? "s" : ""}
             </p>
             {session.isHost && (
-              <p className="text-blue-600 text-xs mt-2 font-medium">You're the host</p>
+              <p className="text-blue-600 text-xs mt-2 font-medium">
+                You're the host
+              </p>
             )}
           </div>
         ))}
@@ -165,7 +177,9 @@ export function SessionList({ onSelectSession }: SessionListProps) {
       {sessions.length === 0 && (
         <div className="text-center py-12">
           <p className="text-gray-500 text-lg">No sessions yet</p>
-          <p className="text-gray-400">Create your first session to get started!</p>
+          <p className="text-gray-400">
+            Create your first session to get started!
+          </p>
         </div>
       )}
     </div>

@@ -1,3 +1,4 @@
+"use client";
 import { useState, useRef } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -15,7 +16,9 @@ export function SessionView({ sessionId, onBack }: SessionViewProps) {
   const [activeTab, setActiveTab] = useState<"photos" | "trades">("photos");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const sessionDetails = useQuery(api.sessions.getSessionDetails, { sessionId });
+  const sessionDetails = useQuery(api.sessions.getSessionDetails, {
+    sessionId,
+  });
   const photos = useQuery(api.photos.getSessionPhotos, { sessionId });
   const trades = useQuery(api.trades.getUserTrades, { sessionId });
 
@@ -23,14 +26,16 @@ export function SessionView({ sessionId, onBack }: SessionViewProps) {
   const capturePhoto = useMutation(api.photos.capturePhoto);
   const revealPhotos = useMutation(api.sessions.revealPhotos);
 
-  const handlePhotoCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoCapture = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     try {
       // Generate upload URL
       const uploadUrl = await generateUploadUrl();
-      
+
       // Upload file
       const result = await fetch(uploadUrl, {
         method: "POST",
@@ -46,9 +51,9 @@ export function SessionView({ sessionId, onBack }: SessionViewProps) {
 
       // Save photo to session
       await capturePhoto({ sessionId, storageId });
-      
+
       toast.success("Photo captured!");
-      
+
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -90,11 +95,15 @@ export function SessionView({ sessionId, onBack }: SessionViewProps) {
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-              sessionDetails.status === 'active' ? 'bg-green-100 text-green-800' :
-              sessionDetails.status === 'revealed' ? 'bg-blue-100 text-blue-800' :
-              'bg-gray-100 text-gray-800'
-            }`}>
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                sessionDetails.status === "active"
+                  ? "bg-green-100 text-green-800"
+                  : sessionDetails.status === "revealed"
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-gray-100 text-gray-800"
+              }`}
+            >
               {sessionDetails.status}
             </span>
             {canReveal && (
@@ -110,7 +119,9 @@ export function SessionView({ sessionId, onBack }: SessionViewProps) {
 
         {/* Session ID for sharing */}
         <div className="bg-gray-50 p-3 rounded-lg">
-          <p className="text-sm text-gray-600 mb-1">Share this ID with friends:</p>
+          <p className="text-sm text-gray-600 mb-1">
+            Share this ID with friends:
+          </p>
           <code className="text-sm font-mono bg-white px-2 py-1 rounded border">
             {sessionId}
           </code>
@@ -180,17 +191,14 @@ export function SessionView({ sessionId, onBack }: SessionViewProps) {
 
         <div className="p-6">
           {activeTab === "photos" && (
-            <PhotoGallery 
-              photos={photos || []} 
+            <PhotoGallery
+              photos={photos || []}
               sessionId={sessionId}
               isRevealed={isRevealed}
             />
           )}
           {activeTab === "trades" && isRevealed && (
-            <TradePanel 
-              trades={trades || []} 
-              sessionId={sessionId}
-            />
+            <TradePanel trades={trades || []} sessionId={sessionId} />
           )}
         </div>
       </div>

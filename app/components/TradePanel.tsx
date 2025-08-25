@@ -1,3 +1,4 @@
+"use client";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -42,7 +43,10 @@ interface TradePanelProps {
 export function TradePanel({ trades }: TradePanelProps) {
   const respondToTrade = useMutation(api.trades.respondToTrade);
 
-  const handleTradeResponse = async (tradeId: Id<"trades">, accept: boolean) => {
+  const handleTradeResponse = async (
+    tradeId: Id<"trades">,
+    accept: boolean
+  ) => {
     try {
       await respondToTrade({ tradeId, accept });
       toast.success(accept ? "Trade accepted!" : "Trade rejected");
@@ -51,8 +55,8 @@ export function TradePanel({ trades }: TradePanelProps) {
     }
   };
 
-  const pendingTrades = trades.filter(trade => trade.status === "pending");
-  const completedTrades = trades.filter(trade => trade.status !== "pending");
+  const pendingTrades = trades.filter((trade) => trade.status === "pending");
+  const completedTrades = trades.filter((trade) => trade.status !== "pending");
 
   if (trades.length === 0) {
     return (
@@ -70,16 +74,24 @@ export function TradePanel({ trades }: TradePanelProps) {
       {/* Pending Trades */}
       {pendingTrades.length > 0 && (
         <div>
-          <h3 className="font-semibold mb-4">Pending Trades ({pendingTrades.length})</h3>
+          <h3 className="font-semibold mb-4">
+            Pending Trades ({pendingTrades.length})
+          </h3>
           <div className="space-y-6">
             {pendingTrades.map((trade) => (
               <div key={trade._id} className="bg-gray-50 p-6 rounded-lg">
                 <div className="flex items-center justify-between mb-4">
                   <div className="text-sm">
                     {trade.isSent ? (
-                      <span>You offered to trade with <strong>{trade.toUserName}</strong></span>
+                      <span>
+                        You offered to trade with{" "}
+                        <strong>{trade.toUserName}</strong>
+                      </span>
                     ) : (
-                      <span><strong>{trade.fromUserName}</strong> wants to trade with you</span>
+                      <span>
+                        <strong>{trade.fromUserName}</strong> wants to trade
+                        with you
+                      </span>
                     )}
                   </div>
                   <span className="text-xs text-gray-500">
@@ -91,7 +103,8 @@ export function TradePanel({ trades }: TradePanelProps) {
                   {/* Offered Photos */}
                   <div>
                     <p className="text-sm font-medium text-blue-700 mb-2">
-                      Offering ({trade.offeredPhotos.length} photo{trade.offeredPhotos.length !== 1 ? 's' : ''}):
+                      Offering ({trade.offeredPhotos.length} photo
+                      {trade.offeredPhotos.length !== 1 ? "s" : ""}):
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       {trade.offeredPhotos.map((photo) => (
@@ -104,7 +117,9 @@ export function TradePanel({ trades }: TradePanelProps) {
                             />
                           ) : (
                             <div className="w-full h-24 bg-gray-200 rounded flex items-center justify-center border-2 border-blue-200">
-                              <span className="text-gray-400 text-xs">Loading...</span>
+                              <span className="text-gray-400 text-xs">
+                                Loading...
+                              </span>
                             </div>
                           )}
                         </div>
@@ -115,7 +130,8 @@ export function TradePanel({ trades }: TradePanelProps) {
                   {/* Requested Photos */}
                   <div>
                     <p className="text-sm font-medium text-green-700 mb-2">
-                      For ({trade.requestedPhotos.length} photo{trade.requestedPhotos.length !== 1 ? 's' : ''}):
+                      For ({trade.requestedPhotos.length} photo
+                      {trade.requestedPhotos.length !== 1 ? "s" : ""}):
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       {trade.requestedPhotos.map((photo) => (
@@ -128,7 +144,9 @@ export function TradePanel({ trades }: TradePanelProps) {
                             />
                           ) : (
                             <div className="w-full h-24 bg-gray-200 rounded flex items-center justify-center border-2 border-green-200">
-                              <span className="text-gray-400 text-xs">Loading...</span>
+                              <span className="text-gray-400 text-xs">
+                                Loading...
+                              </span>
                             </div>
                           )}
                         </div>
@@ -171,24 +189,35 @@ export function TradePanel({ trades }: TradePanelProps) {
       {/* Completed Trades */}
       {completedTrades.length > 0 && (
         <div>
-          <h3 className="font-semibold mb-4">Trade History ({completedTrades.length})</h3>
+          <h3 className="font-semibold mb-4">
+            Trade History ({completedTrades.length})
+          </h3>
           <div className="space-y-4">
             {completedTrades.map((trade) => (
-              <div key={trade._id} className="bg-gray-50 p-4 rounded-lg opacity-75">
+              <div
+                key={trade._id}
+                className="bg-gray-50 p-4 rounded-lg opacity-75"
+              >
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-sm">
                     {trade.isSent ? (
-                      <span>Trade with <strong>{trade.toUserName}</strong></span>
+                      <span>
+                        Trade with <strong>{trade.toUserName}</strong>
+                      </span>
                     ) : (
-                      <span>Trade with <strong>{trade.fromUserName}</strong></span>
+                      <span>
+                        Trade with <strong>{trade.fromUserName}</strong>
+                      </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      trade.status === 'accepted' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        trade.status === "accepted"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
                       {trade.status}
                     </span>
                     <span className="text-xs text-gray-500">

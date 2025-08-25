@@ -1,3 +1,4 @@
+"use client";
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -21,22 +22,30 @@ interface PhotoGalleryProps {
   isRevealed: boolean;
 }
 
-export function PhotoGallery({ photos, sessionId, isRevealed }: PhotoGalleryProps) {
+export function PhotoGallery({
+  photos,
+  sessionId,
+  isRevealed,
+}: PhotoGalleryProps) {
   const [showTradeModal, setShowTradeModal] = useState(false);
-  const [selectedRequestedPhotos, setSelectedRequestedPhotos] = useState<Id<"photos">[]>([]);
-  const [selectedOfferedPhotos, setSelectedOfferedPhotos] = useState<Id<"photos">[]>([]);
+  const [selectedRequestedPhotos, setSelectedRequestedPhotos] = useState<
+    Id<"photos">[]
+  >([]);
+  const [selectedOfferedPhotos, setSelectedOfferedPhotos] = useState<
+    Id<"photos">[]
+  >([]);
   const [targetUserId, setTargetUserId] = useState<Id<"users"> | null>(null);
 
   const createTrade = useMutation(api.trades.createTrade);
 
-  const myPhotos = photos.filter(photo => !photo.canTrade);
-  const tradablePhotos = photos.filter(photo => photo.canTrade);
+  const myPhotos = photos.filter((photo) => !photo.canTrade);
+  const tradablePhotos = photos.filter((photo) => photo.canTrade);
 
   const handlePhotoSelect = (photo: Photo, isRequested: boolean) => {
     if (isRequested) {
-      setSelectedRequestedPhotos(prev => 
-        prev.includes(photo._id) 
-          ? prev.filter(id => id !== photo._id)
+      setSelectedRequestedPhotos((prev) =>
+        prev.includes(photo._id)
+          ? prev.filter((id) => id !== photo._id)
           : [...prev, photo._id]
       );
       // Set target user when selecting requested photos
@@ -44,16 +53,20 @@ export function PhotoGallery({ photos, sessionId, isRevealed }: PhotoGalleryProp
         setTargetUserId(photo.ownerId);
       }
     } else {
-      setSelectedOfferedPhotos(prev => 
-        prev.includes(photo._id) 
-          ? prev.filter(id => id !== photo._id)
+      setSelectedOfferedPhotos((prev) =>
+        prev.includes(photo._id)
+          ? prev.filter((id) => id !== photo._id)
           : [...prev, photo._id]
       );
     }
   };
 
   const handleTradeRequest = async () => {
-    if (!targetUserId || selectedRequestedPhotos.length === 0 || selectedOfferedPhotos.length === 0) {
+    if (
+      !targetUserId ||
+      selectedRequestedPhotos.length === 0 ||
+      selectedOfferedPhotos.length === 0
+    ) {
       toast.error("Please select photos to offer and request");
       return;
     }
@@ -65,7 +78,7 @@ export function PhotoGallery({ photos, sessionId, isRevealed }: PhotoGalleryProp
         offeredPhotoIds: selectedOfferedPhotos,
         requestedPhotoIds: selectedRequestedPhotos,
       });
-      
+
       toast.success("Trade request sent!");
       setShowTradeModal(false);
       setSelectedRequestedPhotos([]);
@@ -113,7 +126,9 @@ export function PhotoGallery({ photos, sessionId, isRevealed }: PhotoGalleryProp
       {/* My Photos */}
       {myPhotos.length > 0 && (
         <div>
-          <h3 className="font-semibold mb-4">Your Photos ({myPhotos.length})</h3>
+          <h3 className="font-semibold mb-4">
+            Your Photos ({myPhotos.length})
+          </h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {myPhotos.map((photo) => (
               <div key={photo._id} className="relative group">
@@ -143,7 +158,9 @@ export function PhotoGallery({ photos, sessionId, isRevealed }: PhotoGalleryProp
       {/* Tradable Photos */}
       {isRevealed && tradablePhotos.length > 0 && (
         <div>
-          <h3 className="font-semibold mb-4">Available for Trade ({tradablePhotos.length})</h3>
+          <h3 className="font-semibold mb-4">
+            Available for Trade ({tradablePhotos.length})
+          </h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {tradablePhotos.map((photo) => (
               <div key={photo._id} className="relative group">
@@ -172,7 +189,7 @@ export function PhotoGallery({ photos, sessionId, isRevealed }: PhotoGalleryProp
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
             <h3 className="text-xl font-semibold mb-6">Create Trade Offer</h3>
-            
+
             <div className="grid md:grid-cols-2 gap-6">
               {/* Photos You Want */}
               <div>
@@ -245,14 +262,27 @@ export function PhotoGallery({ photos, sessionId, isRevealed }: PhotoGalleryProp
             </div>
 
             {/* Trade Summary */}
-            {(selectedRequestedPhotos.length > 0 || selectedOfferedPhotos.length > 0) && (
+            {(selectedRequestedPhotos.length > 0 ||
+              selectedOfferedPhotos.length > 0) && (
               <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                 <h4 className="font-medium mb-2">Trade Summary:</h4>
                 <p className="text-sm text-gray-600">
-                  You're offering <strong>{selectedOfferedPhotos.length}</strong> photo{selectedOfferedPhotos.length !== 1 ? 's' : ''} 
+                  You're offering{" "}
+                  <strong>{selectedOfferedPhotos.length}</strong> photo
+                  {selectedOfferedPhotos.length !== 1 ? "s" : ""}
                   {targetUserId && (
-                    <> for <strong>{selectedRequestedPhotos.length}</strong> photo{selectedRequestedPhotos.length !== 1 ? 's' : ''} from{' '}
-                    <strong>{tradablePhotos.find(p => p.ownerId === targetUserId)?.ownerName}</strong></>
+                    <>
+                      {" "}
+                      for <strong>{selectedRequestedPhotos.length}</strong>{" "}
+                      photo{selectedRequestedPhotos.length !== 1 ? "s" : ""}{" "}
+                      from{" "}
+                      <strong>
+                        {
+                          tradablePhotos.find((p) => p.ownerId === targetUserId)
+                            ?.ownerName
+                        }
+                      </strong>
+                    </>
                   )}
                 </p>
               </div>
@@ -261,7 +291,10 @@ export function PhotoGallery({ photos, sessionId, isRevealed }: PhotoGalleryProp
             <div className="flex gap-3 mt-6">
               <button
                 onClick={handleTradeRequest}
-                disabled={selectedRequestedPhotos.length === 0 || selectedOfferedPhotos.length === 0}
+                disabled={
+                  selectedRequestedPhotos.length === 0 ||
+                  selectedOfferedPhotos.length === 0
+                }
                 className="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 Send Trade Request

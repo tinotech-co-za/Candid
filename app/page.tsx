@@ -1,15 +1,16 @@
+"use client";
 import { Authenticated, Unauthenticated, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { SignInForm } from "./SignInForm";
-import { SignOutButton } from "./SignOutButton";
-import { Toaster } from "sonner";
+import { SignInForm } from "./components/SignInForm";
+import { SignOutButton } from "./components/SignOutButton";
 import { SessionList } from "./components/SessionList";
 import { SessionView } from "./components/SessionView";
 import { useState } from "react";
 import { Id } from "../convex/_generated/dataModel";
 
-export default function App() {
-  const [currentSessionId, setCurrentSessionId] = useState<Id<"sessions"> | null>(null);
+export default function HomePage() {
+  const [currentSessionId, setCurrentSessionId] =
+    useState<Id<"sessions"> | null>(null);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -28,20 +29,19 @@ export default function App() {
         <SignOutButton />
       </header>
       <main className="flex-1 p-4">
-        <Content 
+        <Content
           currentSessionId={currentSessionId}
           setCurrentSessionId={setCurrentSessionId}
         />
       </main>
-      <Toaster />
     </div>
   );
 }
 
-function Content({ 
-  currentSessionId, 
-  setCurrentSessionId 
-}: { 
+function Content({
+  currentSessionId,
+  setCurrentSessionId,
+}: {
   currentSessionId: Id<"sessions"> | null;
   setCurrentSessionId: (id: Id<"sessions"> | null) => void;
 }) {
@@ -59,7 +59,7 @@ function Content({
     <div className="max-w-4xl mx-auto">
       <Authenticated>
         {currentSessionId ? (
-          <SessionView 
+          <SessionView
             sessionId={currentSessionId}
             onBack={() => setCurrentSessionId(null)}
           />
