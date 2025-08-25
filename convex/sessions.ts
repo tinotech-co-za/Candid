@@ -77,7 +77,7 @@ export const getUserSessions = query({
       participations.map(async (p) => {
         const session = await ctx.db.get(p.sessionId);
         if (!session) return null;
-        
+
         const host = await ctx.db.get(session.hostId);
         const participantCount = await ctx.db
           .query("sessionParticipants")
@@ -93,7 +93,9 @@ export const getUserSessions = query({
       })
     );
 
-    return sessions.filter((session): session is NonNullable<typeof session> => session !== null);
+    return sessions.filter(
+      (session): session is NonNullable<typeof session> => session !== null
+    );
   },
 });
 
@@ -103,7 +105,7 @@ export const getSessionDetails = query({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    if (!userId) return null; // Return null for unauthenticated users
 
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Session not found");
@@ -115,7 +117,7 @@ export const getSessionDetails = query({
       .filter((q) => q.eq(q.field("userId"), userId))
       .first();
 
-    if (!participation) throw new Error("Not a participant");
+    if (!participation) return null; // Return null for non-participants
 
     const participants = await ctx.db
       .query("sessionParticipants")
@@ -165,13 +167,13 @@ export const revealPhotos = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    if (!userId) throw new Error("Please sign in to reveal photos");
 
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Session not found");
 
     if (session.hostId !== userId) {
-      throw new Error("Only host can reveal photos");
+      throw new Error("Only session hosts can reveal photos");
     }
 
     // Update session status

@@ -6,8 +6,8 @@ export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-    
+    if (!userId) throw new Error("Please sign in to upload photos");
+
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -19,7 +19,7 @@ export const capturePhoto = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    if (!userId) throw new Error("Please sign in to capture photos");
 
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Session not found");
@@ -35,7 +35,8 @@ export const capturePhoto = mutation({
       .filter((q) => q.eq(q.field("userId"), userId))
       .first();
 
-    if (!participation) throw new Error("Not a participant");
+    if (!participation)
+      throw new Error("You're not a participant in this session");
 
     const photoId = await ctx.db.insert("photos", {
       sessionId: args.sessionId,
@@ -75,7 +76,7 @@ export const getSessionPhotos = query({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    if (!userId) return []; // Return empty array for unauthenticated users
 
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Session not found");
@@ -87,7 +88,7 @@ export const getSessionPhotos = query({
       .filter((q) => q.eq(q.field("userId"), userId))
       .first();
 
-    if (!participation) throw new Error("Not a participant");
+    if (!participation) return []; // Return empty array for non-participants
 
     const photos = await ctx.db
       .query("photos")
@@ -103,15 +104,18 @@ export const getSessionPhotos = query({
       visiblePhotos.map(async (photo) => {
         const url = await ctx.storage.getUrl(photo.storageId);
         const capturer = await ctx.db.get(photo.capturedBy);
-        const owner = photo.tradedTo ? await ctx.db.get(photo.tradedTo) : capturer;
-        
+        const owner = photo.tradedTo
+          ? await ctx.db.get(photo.tradedTo)
+          : capturer;
+
         return {
           ...photo,
           url,
           capturerName: capturer?.name || capturer?.email || "Unknown",
           ownerName: owner?.name || owner?.email || "Unknown",
           ownerId: photo.tradedTo || photo.capturedBy,
-          canTrade: photo.isRevealed && (photo.tradedTo || photo.capturedBy) !== userId,
+          canTrade:
+            photo.isRevealed && (photo.tradedTo || photo.capturedBy) !== userId,
         };
       })
     );
