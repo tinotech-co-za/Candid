@@ -3,6 +3,53 @@ import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
 
 const applicationTables = {
+  events: defineTable({
+    displayName: v.string(),
+    hostId: v.id("users"),
+    description: v.optional(v.string()),
+    startTime: v.optional(v.string()),
+    endTime: v.optional(v.string()),
+    coverUrl: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_host", ["hostId"]),
+  eventParticipants: defineTable({
+    eventId: v.id("events"),
+    userId: v.id("users"),
+    displayName: v.string(),
+    avatarUrl: v.optional(v.string()),
+    payshapOrBank: v.optional(v.string()),
+    joinedAt: v.number(),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_user", ["userId"]),
+  expenses: defineTable({
+    eventId: v.id("events"),
+    description: v.string(),
+    amountCents: v.number(),
+    currency: v.string(),
+    paidById: v.array(v.id("users")),
+    createdAt: v.number(),
+    createdBy: v.id("users"),
+    attachedPhotoId: v.optional(v.id("photos")),
+  }).index("by_event", ["eventId"]),
+  expenseShares: defineTable({
+    expenseId: v.id("expenses"),
+    userId: v.id("users"),
+    shareCents: v.number(),
+    settled: v.boolean(),
+    settledAt: v.optional(v.number()),
+    settledBy: v.optional(v.id("users")),
+  })
+    .index("by_expense", ["expenseId"])
+    .index("by_user", ["userId"]),
+  simplifiedDebts: defineTable({
+    eventId: v.id("events"),
+    fromUserId: v.id("users"),
+    toUserId: v.id("users"),
+    amountCents: v.number(),
+  })
+    .index("by_from_user", ["fromUserId"])
+    .index("by_to_user", ["toUserId"]),
   sessions: defineTable({
     name: v.string(),
     hostId: v.id("users"),
