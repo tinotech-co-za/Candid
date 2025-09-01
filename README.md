@@ -1,4 +1,4 @@
-# Candid Photo Trading App
+# Candids Photo Trading App
 
 This is a photo trading app built with [Next.js](https://nextjs.org/) using [Convex](https://convex.dev) as its backend. It allows users to create photo sessions, capture candid moments, and trade photos with friends.
 
@@ -33,7 +33,6 @@ This is a photo trading app built with [Next.js](https://nextjs.org/) using [Con
    ```
 
 3. Set up your Convex project:
-
    - Create a new project at [convex.dev](https://convex.dev)
    - Copy your deployment URL and update `.env.local`:
 
